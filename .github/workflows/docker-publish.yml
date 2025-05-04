@@ -9,7 +9,7 @@ on:
   push:
     branches: [master]
     # Publish semver tags as releases.
-    tags: ["v*.*.*"]
+    tags: ["*.*.*"]
   pull_request:
     branches: [master]
 
@@ -32,6 +32,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      # Extract version from pgloader.spec
+      - name: Get package version
+        id: package-version
+        run: echo "version=$(grep '^Version:' pgloader.spec | awk '{print $2}')" >> $GITHUB_OUTPUT
 
       # Required to build arm64 image
       - name: Set up QEMU
@@ -70,6 +75,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
+            type=raw,value=${{ steps.package-version.outputs.version }},enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
             type=semver,pattern={{version}}
 
       # Build and push Docker image with Buildx (don't push on PR)
